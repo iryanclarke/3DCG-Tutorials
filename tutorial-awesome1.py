@@ -2,6 +2,7 @@
 import maya.cmds as cmds
 
 ZeroVal = 0.00000000001 
+intersectCount = 0
 
 #if cmds.window(MyWin, exists=True):
  #  cmds.deleteUI(MyWin, window=True)
@@ -19,7 +20,8 @@ def findIntersect():
         # Get Sphere vertexes and center
         sphereVertex = getVertices(selectedShape[0])
         sphereCentre = cmds.objectCenter(selectedShape[0], gl=True)
-         
+        
+        intersectCount = 0
         # Loop through all sphere vertexes
         for vertex in sphereVertex:
              
@@ -51,7 +53,7 @@ def drawCubes(theCube, linePt1, linePt2):
     cubeRelatives = cmds.listRelatives(cubeShape,parent=True)
     cubeTransform = cmds.xform(cubeRelatives, query=True, matrix=True, worldSpace=True)
     
-    
+    intersectCount
     for facet in range(0, facetCount):
         # Fetching vertex x,y,z coordinates of each facet
         vertexList = cmds.polyInfo((theCube + ".f[" + str(facet) + "]"), faceToVertex=True)
@@ -61,14 +63,20 @@ def drawCubes(theCube, linePt1, linePt2):
         vertexC = cmds.getAttr(theCube  + ".vt[" + vtxIdx[4] + "]")
         vertexD = cmds.getAttr(theCube  + ".vt[" + vtxIdx[5] + "]")
         
-        mixX = min(vertexA[0], vertexB[0], vertexC[0], vertexD[0])
-        maxX = 
-         
+                              
         # Turning the tuple into a list, python is mean, and also converting from local space to world
         newVertexA = mutiplyMatrices(cubeTransform, list(vertexA[0]) )
         newVertexB = mutiplyMatrices(cubeTransform, list(vertexB[0]) )
         newVertexC = mutiplyMatrices(cubeTransform, list(vertexC[0]) )
+        newVertexD = mutiplyMatrices(cubeTransform, list(vertexD[0]) )
         
+        # Find the maximum and minimum X,Y,Z value to bound the points to just the cube
+        minX = min(newVertexA[0], newVertexB[0], newVertexC[0], newVertexD[0])
+        maxX = max(newVertexA[0], newVertexB[0], newVertexC[0], newVertexD[0])
+        minY = min(newVertexA[1], newVertexB[1], newVertexC[1], newVertexD[1])
+        maxY = max(newVertexA[1], newVertexB[1], newVertexC[1], newVertexD[1])
+        minZ = min(newVertexA[2], newVertexB[2], newVertexC[2], newVertexD[2])
+        maxZ = max(newVertexA[2], newVertexB[2], newVertexC[2], newVertexD[2])   
                  
         planeEq = getPlaneEquation(newVertexA, newVertexB, newVertexC)
         
@@ -86,8 +94,11 @@ def drawCubes(theCube, linePt1, linePt2):
             planePoint[0] = linePt1[0] + (t * (linePt2[0] - linePt1[0]))
             planePoint[1] = linePt1[1] + (t * (linePt2[1] - linePt1[1]))
             planePoint[2] = linePt1[2] + (t * (linePt2[2] - linePt1[2]))
-            cmds.polyCube(width=0.1, height=0.1, depth=0.1)
-            cmds.move(planePoint[0], planePoint[1], planePoint[2])
+            
+            # ONLY draw a cube if the point does not exceed the boundaries of the cube!
+            if( planePoint[0] <= maxX and planePoint[0] >= minX and planePoint[1] <= maxY and planePoint[1] >= minY and planePoint[2] <= maxZ and planePoint[2] >= minZ ):
+                cmds.polyCube(width=0.1, height=0.1, depth=0.1)
+                cmds.move(planePoint[0], planePoint[1], planePoint[2])
              
              
             # Adding elements to the text scroll list
