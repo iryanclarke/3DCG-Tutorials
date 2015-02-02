@@ -1,7 +1,7 @@
 # Imports
 import maya.cmds as cmds
 
-ZV = 0.00000000001 
+ZeroVal = 0.00000000001 
 
 #if cmds.window(MyWin, exists=True):
  #  cmds.deleteUI(MyWin, window=True)
@@ -24,7 +24,7 @@ def findIntersect():
         for vertex in sphereVertex:
              
             # Draw lines from center of cube to circle vertexes
-            cmds.curve( p=[sphereCentre, vertex] )
+            cmds.curve( p=[sphereCentre, vertex], k=[0,1], degree=1 )
                          
             # Now check intersection of each line on the cube
             drawCubes(selectedShape[1], sphereCentre, vertex)
@@ -51,7 +51,7 @@ def drawCubes(theCube, linePt1, linePt2):
     cubeRelatives = cmds.listRelatives(cubeShape,parent=True)
     cubeTransform = cmds.xform(cubeRelatives, query=True, matrix=True, worldSpace=True)
     
-     
+    
     for facet in range(0, facetCount):
         # Fetching vertex x,y,z coordinates of each facet
         vertexList = cmds.polyInfo((theCube + ".f[" + str(facet) + "]"), faceToVertex=True)
@@ -59,19 +59,25 @@ def drawCubes(theCube, linePt1, linePt2):
         vertexA = cmds.getAttr(theCube  + ".vt[" + vtxIdx[2] + "]")
         vertexB = cmds.getAttr(theCube  + ".vt[" + vtxIdx[3] + "]")
         vertexC = cmds.getAttr(theCube  + ".vt[" + vtxIdx[4] + "]")
+        vertexD = cmds.getAttr(theCube  + ".vt[" + vtxIdx[5] + "]")
+        
+        mixX = min(vertexA[0], vertexB[0], vertexC[0], vertexD[0])
+        maxX = 
          
         # Turning the tuple into a list, python is mean, and also converting from local space to world
         newVertexA = mutiplyMatrices(cubeTransform, list(vertexA[0]) )
         newVertexB = mutiplyMatrices(cubeTransform, list(vertexB[0]) )
         newVertexC = mutiplyMatrices(cubeTransform, list(vertexC[0]) )
+        
                  
         planeEq = getPlaneEquation(newVertexA, newVertexB, newVertexC)
-        print planeEq 
         
-        # Determine if the points are on opposite sides of the plane        
+        
+        # Determine sValue for each of the points       
         sValueA = (planeEq[0]*linePt1[0])+(planeEq[1]*linePt1[1])+(planeEq[2]*linePt1[2]) + planeEq[3]
         sValueB = (planeEq[0]*linePt2[0])+(planeEq[1]*linePt2[1])+(planeEq[2]*linePt2[2]) + planeEq[3]
         
+        # Determine if the points are on opposite sides of the plane
         if(((sValueA>0.0) and (sValueB<0.0)) or ((sValueA<0.0) and (sValueB>0.0))):
             t = 0.0
             t = getT(planeEq, linePt1, linePt2)
@@ -95,16 +101,9 @@ def drawCubes(theCube, linePt1, linePt2):
 #                                                                    #
  
 
-# Plane equation!
+# Plane equation
 def getPlaneEquation(VertexA, VertexB, VertexC):
-    #planeEq = [0.0, 0.0, 0.0, 0.0]
-    #planeEq[0] = (VertexA[1] * (VertexB[2]-VertexC[2])) + (VertexB[1] * (VertexC[2]-VertexA[2])) + (VertexC[1] * (VertexA[2]-VertexB[2]))
-    #planeEq[1] = (VertexA[2] * (VertexB[0]-VertexC[0])) + (VertexB[2] * (VertexC[0]-VertexA[0])) + (VertexC[2] * (VertexA[0]-VertexB[0]))
-    #planeEq[2] = (VertexA[0] * (VertexB[1]-VertexC[1])) + (VertexB[0] * (VertexC[1]-VertexA[1])) + (VertexC[0] * (VertexA[1]-VertexB[1]))
-    #planeEq[3] = (VertexA[0] * ((VertexB[1]*VertexC[2])-(VertexC[1]*VertexB[2]))) + (VertexB[0] * ((VertexC[1]*VertexA[2])-(VertexA[1]*VertexC[2]))) + (VertexC[0] * ((VertexA[1]*VertexB[2])-(VertexB[1]*VertexA[2])))
-    #planeEq[3] = -(planeEq[3])
-    
-    # Plane euation is Ax + By + Cz + D, and ABC is the normal vector
+    # Plane euation is Ax + By + Cz = D, and ABC is the normal vector
     
     # Create empty array
     normalPoints = [0.0, 0.0, 0.0]
@@ -131,9 +130,10 @@ def getPlaneEquation(VertexA, VertexB, VertexC):
     planeEq[3] = -valueD
     
     # Check if they are colinear
-    if((abs(planeEq[0]) < ZV) and (abs(planeEq[1]) < ZV) and (abs(planeEq[2]) < ZV)):
+    if((abs(planeEq[0]) < ZeroVal) and (abs(planeEq[1]) < ZeroVal) and (abs(planeEq[2]) < ZeroVal)):
         print("Error Points are colinear")
         return False
+    
     return planeEq 
 
 
@@ -172,10 +172,12 @@ def getVertices( shapeSelected ):
         
 # Cross product, returns the normal vector
 def getCrossProduct(point1, point2):
-    crossX = ( point1[1] * point2[2]) - (point1[2] - point2[1] )
-    crossY = ( point1[2] * point2[0]) - (point1[0] - point2[2] )
-    crossZ = ( point1[0] * point2[1]) - (point1[1] - point2[0] )
-    return [ crossX, crossY, crossZ ]
+    crossX = ( point1[1] * point2[2]) - (point1[2] * point2[1] )
+    crossY = ( point1[2] * point2[0]) - (point1[0] * point2[2] )
+    crossZ = ( point1[0] * point2[1]) - (point1[1] * point2[0] )
+    
+    result = [ crossX, crossY, crossZ ]
+    return result
  
 # Dot product, returns the magnitude
 def getDotProduct(normal, pointA):
@@ -206,9 +208,8 @@ def mutiplyMatrices(transformedMesh, point):
      
     # Convert local point to a homogenous one
     localPoint = [point[0], point[1], point[2], 1]
-     
-    #for i in range(0, 3):
-        #globalPoint[i] = ( transformedMesh[i]*localPoint[0] ) + ( transformedMesh[i + 3]*localPoint[1] ) + ( transformedMesh[i + 8]*localPoint[2] ) + ( transformedMesh[i + 12]*localPoint[3] )
+    
+    # Now find the local point by multiplying the local point by its transform
     globalPoint[0] = (transformedMesh[0]*localPoint[0])+(transformedMesh[4]*localPoint[1])+(transformedMesh[8]*localPoint[2])+(transformedMesh[12]*localPoint[3])
     globalPoint[1] = (transformedMesh[1]*localPoint[0])+(transformedMesh[5]*localPoint[1])+(transformedMesh[9]*localPoint[2])+(transformedMesh[13]*localPoint[3])
     globalPoint[2] = (transformedMesh[2]*localPoint[0])+(transformedMesh[6]*localPoint[1])+(transformedMesh[10]*localPoint[2])+(transformedMesh[14]*localPoint[3])
