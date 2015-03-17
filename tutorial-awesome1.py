@@ -1,8 +1,11 @@
 # Imports
 import maya.cmds as cmds
-import math
- 
+import math as math
+
+# Zero Value checking 
 ZeroVal = 0.00000000001
+
+global intersectCount
 intersectCount = 0
  
 #if cmds.window(MyWin, exists=True):
@@ -27,7 +30,7 @@ def findIntersect():
         for vertex in sphereVertex:
               
             # Draw lines from center of cube to circle vertexes
-            cmds.curve( p=[sphereCentre, vertex], k=[0,1], degree=1 )
+            cmds.curve( p=[sphereCentre, vertex])
                           
             # Now check intersection of each line on the cube
             drawCubes(selectedShape[1], sphereCentre, vertex)
@@ -43,6 +46,7 @@ def findIntersect():
   
 # Determines where the line intersects the cube and draws little cube there
 def drawCubes(theCube, linePt1, linePt2):
+    global intersectCount
              
     # Ensure to list the relatives of the cube in order to actually find its location, otherwise it will return a non when performing the listR
     cubeShape = cmds.listRelatives(theCube, fullPath=True, shapes=True) 
@@ -54,7 +58,7 @@ def drawCubes(theCube, linePt1, linePt2):
     cubeRelatives = cmds.listRelatives(cubeShape,parent=True)
     cubeTransform = cmds.xform(cubeRelatives, query=True, matrix=True, worldSpace=True)
      
-    intersectCount = 0
+     
     for facet in range(0, facetCount):
         # Fetching vertex x,y,z coordinates of each facet
         vertexList = cmds.polyInfo((theCube + ".f[" + str(facet) + "]"), faceToVertex=True)
@@ -106,17 +110,49 @@ def drawCubes(theCube, linePt1, linePt2):
                  
                 # Calculate the normal of the intersecting facet
                 facetNormal = getNormal( newVertexA, newVertexB, newVertexC )
-                  
+                
+                # Calculate the angle
+                angle = getAngle(  linePt1, linePt2 )
+                
                 # Rounding to 2 decimal places
-                roundedPoint1 = round(planePoint[0], 2)
-                roundedPoint2 = round(planePoint[1], 2) 
-                roundedPoint3 = round(planePoint[2], 2)
+                rndPoint1 = round(planePoint[0], 2)
+                rndPoint2 = round(planePoint[1], 2) 
+                rndPoint3 = round(planePoint[2], 2)
+                
+                rndLnPt1 = [0.0, 0.0, 0.0]
+                rndLnPt1[0] = round(linePt1[0], 2)
+                rndLnPt1[1] = round(linePt1[1], 2)
+                rndLnPt1[2] = round(linePt1[2], 2)
+                
+                rndLnPt2 = [0.0, 0.0, 0.0]
+                rndLnPt2[0] = round(linePt2[0], 2)
+                rndLnPt2[1] = round(linePt2[1], 2)
+                rndLnPt2[2] = round(linePt2[2], 2)
+                
+                rndNormal = [0.0, 0.0, 0.0]
+                rndNormal[0] = round(facetNormal[0], 2)
+                rndNormal[1] = round(facetNormal[1], 2)
+                rndNormal[2] = round(facetNormal[2], 2)
+                
                 roundedArea = round(facetArea, 2)
+                
                 
                  
                 # Adding cube point to the text scroll list
-                ptText = "Point [" + str(intersectCount) + "] " + str(roundedPoint1) + ", " + str(roundedPoint2) +", " + str(roundedPoint3) + " Area: " + str(roundedArea) + " Normal: " + str(facetNormal) 
-                cmds.textScrollList('intersectList', edit=True, append=[ptText])
+                pointInfo = "Point [" + str(intersectCount) + "] (" + str(rndPoint1) + ", " + str(rndPoint2) +", " + str(rndPoint3) + ")\n"
+                # Adding intersecting line to the text scroll list
+                lineInfo = "    Line points: [ A(" + str(rndLnPt1[0]) + ", " + str(rndLnPt1[1]) + ", " + str(rndLnPt1[2]) +")   B(" + str(rndLnPt2[0]) + ", " + str(rndLnPt2[1]) + ", " + str(rndLnPt2[2]) +") ]\n"
+                # Adding facet area to the text scroll list
+                AreaInfo = "    Area: " + str(roundedArea) + " \n"
+                # Adding normal to the text scroll list
+                NormalInfo = "    Normal: (" + str(rndNormal[0]) + ", " + str(rndNormal[1]) + ", " + str(rndNormal[2]) +")\n"
+                # Adding angle to the text scroll list
+                AngleInfo = "    Angle: " + str(angle)  +"\n"
+                
+                
+                scrollText = str(pointInfo) +  str(lineInfo)  + str(AreaInfo)  + str(NormalInfo) + str(AngleInfo)
+                cmds.textScrollList('intersectList', edit=True, append=[scrollText])
+                
                 intersectCount += 1
                  
                  
@@ -180,6 +216,33 @@ def getNormal(pointA, pointB, pointC):
     # Now perform cross product on two lines for the perpendicular line (normal)
     normal = getCrossProduct( line1, line2 )
     return normal
+
+# Get angle between XZ plane and the two points    
+def getAngle(point1, point2):
+    # Need to get dot product of normal and point
+    normal = [ 0.0, 1.0, 0.0 ]
+    normal2 = [ 0.0, 0.0, 0.0 ]
+    line = [0.0, 0.0, 0.0]
+    line[0] = point1[0] - point2[0]
+    line[1] = point1[1] - point2[1]
+    line[2] = point1[2] - point2[2]
+    
+    # Find numerator and denominator
+    numerator = getDotProduct( normal, line)
+    denom1 = getLength( normal, normal2 )
+    denom2 = getLength( point1, point2)
+    absolute1 = abs(denom1)
+    absolute2 = abs(denom2)  
+    cosineCalc = ( numerator / (absolute1 * absolute2 ) )
+    
+    # Find angle between the NORMAL and the vector
+    angle = math.acos( cosineCalc )
+    
+    # Now find angle between the vector and the PLANE
+    angleWithPlane = 1.570796 - angle
+    return angleWithPlane
+   
+        
   
 # Gets the verticies of the selected shape
 def getVertices( shapeSelected ):
@@ -206,11 +269,12 @@ def getCrossProduct(point1, point2):
     return result
   
 # Dot product, returns the magnitude
-def getDotProduct(normal, pointA):
-    dotProduct = [0.0, 0.0, 0.0]
-    dotProduct[0] = normal[0] * pointA[0]
-    dotProduct[1] = normal[1] * pointA[1]
-    dotProduct[2] = normal[2] * pointA[2]
+def getDotProduct(normal, vector):
+    dotProductt = [0.0, 0.0, 0.0]
+    dotProductt[0] = normal[0] * vector[0]
+    dotProductt[1] = normal[1] * vector[1]
+    dotProductt[2] = normal[2] * vector[2]
+    dotProduct = dotProductt[0] + dotProductt[1] + dotProductt[2]
     return dotProduct
   
 # Get the t value, or where along the line where the intersection is 
@@ -242,15 +306,19 @@ def mutiplyMatrices(transformedMesh, point):
     globalPoint[1] = (transformedMesh[1]*localPoint[0])+(transformedMesh[5]*localPoint[1])+(transformedMesh[9]*localPoint[2])+(transformedMesh[13]*localPoint[3])
     globalPoint[2] = (transformedMesh[2]*localPoint[0])+(transformedMesh[6]*localPoint[1])+(transformedMesh[10]*localPoint[2])+(transformedMesh[14]*localPoint[3])
     globalPoint[3] = (transformedMesh[3]*localPoint[0])+(transformedMesh[7]*localPoint[1])+(transformedMesh[11]*localPoint[2])+(transformedMesh[15]*localPoint[3])
-    return (globalPoint)       
+    return (globalPoint)      
+     
+# Length of a line
+def getLength( point1, point2):
+    vectorLength = ( ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2) + ((point1[2] - point2[2]) ** 2) ) ** 0.5
+    return vectorLength
  
 # Area Calculation
 def areaOfFacet(point1, point2, point3):
     # Find the length (distance) of two sides by using the length euqation in Euclidean space
     vectorLen1 = ( ((point1[0] - point2[0]) ** 2) + ((point1[1] - point2[1]) ** 2) + ((point1[2] - point2[2]) ** 2) ) ** 0.5
-    vectorLen2 = ( ((point1[0] - point3[0]) ** 2) + ((point1[1] - point3[1]) ** 2) + ((point1[2] - point3[2]) ** 2) ) ** 0.5
-    print vectorLen1
-    print vectorLen2
+    vectorLen2 = ( ((point2[0] - point3[0]) ** 2) + ((point2[1] - point3[1]) ** 2) + ((point2[2] - point3[2]) ** 2) ) ** 0.5
+
     # Area of a square (in this case, square on a cube) is base * height
     area = vectorLen1 * vectorLen2
     print area

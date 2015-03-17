@@ -1,0 +1,22 @@
+# 
+# Wavefront material file
+# Converted by the DEEP Exploration  Deep Exploration 5.5 5.5.3.2642 Release
+# Right Hemisphere, LTD
+# http://www.righthemisphere.com/
+# 
+
+newmtl _7___Default
+Ka 0.5882 0.5882 0.5882
+Kd 0.5882 0.5882 0.5882
+Ks 0.846 0.846 0.846
+illum 2
+Ns 37
+map_Kd C:\\Users\\Acharya-das\\Desktop\\3DS Max files\\traffic cone\\Texture\\Traffic-Cone.jpg
+map_bump 
+bump 
+map_opacity 
+map_d 
+refl 
+map_kS 
+map_kA C:\\Users\\Acharya-das\\Desktop\\3DS Max files\\traffic cone\\Texture\\Traffic-Cone.jpg
+map_Ns 
